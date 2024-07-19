@@ -21,8 +21,8 @@
           >
             {{ isExpanded(movie.id) ? 'Ver menos' : 'Ver mais' }}
           </button>
-          <p class="rating">Nota: {{ movie.vote_average }}</p>
-          <p class="genres">Gêneros: {{ getGenres(movie.genre_ids).join(', ') }}</p>
+          <p class="rating">Nota: {{ movie.vote_average.toFixed(1) }}</p>
+          <p class="genres">Gênero: {{ getGenres(movie.genre_ids).join(', ') }}</p>
         </div>
       </div>
     </div>
@@ -56,7 +56,7 @@ export default {
 
       try {
         const response = await fetch(
-          `https://api.themoviedb.org/3/movie/now_playing?language=en-US&page=${page.value}`,
+          `https://api.themoviedb.org/3/movie/now_playing?language=pt&page=${page.value}`,
           options
         )
         const data = await response.json()
@@ -79,7 +79,7 @@ export default {
 
       try {
         const response = await fetch(
-          'https://api.themoviedb.org/3/genre/movie/list?language=en-US',
+          'https://api.themoviedb.org/3/genre/movie/list?language=pt',
           options
         )
         const data = await response.json()
