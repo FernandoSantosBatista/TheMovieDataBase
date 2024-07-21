@@ -10,22 +10,28 @@
           aria-label="Menu"
           @click="toggleLeftDrawer"
         />
-
-        <q-toolbar-title> Quasar App </q-toolbar-title>
-
-        <div>Quasar v{{ $q.version }}</div>
+        <q-toolbar-title> FilmePediaApp </q-toolbar-title>
+        <div>v {{ $q.version }}</div>
       </q-toolbar>
     </q-header>
 
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
       <q-list>
-        <q-item-label header> Essential Links </q-item-label>
-
-        <EssentialLink
+        <q-item-label header> Menu </q-item-label>
+        <q-item
           v-for="link in linksList"
           :key="link.title"
-          v-bind="link"
-        />
+          clickable
+          @click="navigateTo(link.link)"
+        >
+          <q-item-section avatar>
+            <q-icon :name="link.icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>{{ link.title }}</q-item-label>
+            <q-item-label caption>{{ link.caption }}</q-item-label>
+          </q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
@@ -37,7 +43,7 @@
 
 <script setup>
 import { ref } from "vue";
-import EssentialLink from "components/EssentialLink.vue";
+import { useRouter } from "vue-router";
 
 defineOptions({
   name: "MainLayout",
@@ -45,16 +51,28 @@ defineOptions({
 
 const linksList = [
   {
-    title: "Docs",
-    caption: "quasar.dev",
-    icon: "school",
-    link: "https://quasar.dev",
+    title: "Filmes",
+    caption: "filmes recentes",
+    icon: "movie",
+    link: "/",
+  },
+  {
+    title: "Séries",
+    caption: "séries recentes",
+    icon: "tv",
+    link: "/series",
   },
 ];
 
 const leftDrawerOpen = ref(false);
+const router = useRouter();
 
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value;
+}
+
+function navigateTo(link) {
+  router.push(link);
+  leftDrawerOpen.value = false; // Fecha o drawer após a navegação
 }
 </script>

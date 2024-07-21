@@ -1,46 +1,45 @@
-<!-- src/pages/IndexPage.vue -->
 <template>
   <div class="container">
-    <div class="title">Filmes Mais Recentes</div>
+    <div class="title">Séries Mais Recentes</div>
     <div v-if="loading" class="spinner-container">
       <q-spinner color="primary" />
     </div>
-    <div v-else-if="movies.length" class="card-container">
-      <q-card v-for="movie in movies" :key="movie.id" class="my-card">
+    <div v-else-if="tvShows.length" class="card-container">
+      <q-card v-for="show in tvShows" :key="show.id" class="my-card">
         <q-img
-          :src="'https://image.tmdb.org/t/p/w500' + movie.poster_path"
-          :alt="movie.title"
-          class="q-mb-md movie-poster"
+          :src="'https://image.tmdb.org/t/p/w500' + show.poster_path"
+          :alt="show.name"
+          class="q-mb-md show-poster"
         />
         <q-card-section class="card-content">
-          <div class="text-h6 movie-title">{{ movie.title }}</div>
-          <div class="movie-info">
-            <strong>Lançamento:</strong> {{ movie.release_date }}
+          <div class="text-h6 show-title">{{ show.name }}</div>
+          <div class="show-info">
+            <strong>Primeiro Episódio:</strong> {{ show.first_air_date }}
           </div>
-          <div class="movie-info">
-            <strong>Gêneros:</strong> {{ getGenres(movie.genre_ids) }}
+          <div class="show-info">
+            <strong>Gêneros:</strong> {{ getGenres(show.genre_ids) }}
           </div>
-          <div class="movie-info">
-            <strong>Nota:</strong> {{ movie.vote_average.toFixed(1) }}
+          <div class="show-info">
+            <strong>Nota:</strong> {{ show.vote_average.toFixed(1) }}
           </div>
           <q-separator />
-          <div class="text-body2 movie-description">
-            {{ truncatedDescriptions[movie.id] }}
+          <div class="text-body2 show-description">
+            {{ truncatedDescriptions[show.id] }}
           </div>
           <q-btn
-            v-if="movie.overview.length > 150"
-            @click="toggleDescription(movie.id)"
+            v-if="show.overview.length > 150"
+            @click="toggleDescription(show.id)"
             color="primary"
             flat
             class="toggle-btn"
           >
-            {{ expandedDescriptions[movie.id] ? "Ver menos" : "Ver mais" }}
+            {{ expandedDescriptions[show.id] ? "Ver menos" : "Ver mais" }}
           </q-btn>
         </q-card-section>
       </q-card>
     </div>
-    <div v-else class="no-movies">
-      <div>Nenhum filme encontrado.</div>
+    <div v-else class="no-shows">
+      <div>Nenhuma série encontrada.</div>
     </div>
     <div class="pagination q-mt-md">
       <q-btn
@@ -67,8 +66,8 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 
-// Lista de filmes, gêneros e paginação
-const movies = ref([]);
+// Lista de séries, gêneros e paginação
+const tvShows = ref([]);
 const genres = ref([]);
 const currentPage = ref(1);
 const totalPages = ref(1);
@@ -77,23 +76,23 @@ const loading = ref(false);
 // Estado para descrições expandidas
 const expandedDescriptions = ref({});
 
-// Função para buscar filmes com base na página atual
-const fetchMovies = async (page = 1) => {
+// Função para buscar séries com base na página atual
+const fetchTvShows = async (page = 1) => {
   loading.value = true;
   try {
     const response = await fetch(
-      `https://api.themoviedb.org/3/movie/now_playing?language=pt-BR&page=${page}`,
+      `https://api.themoviedb.org/3/tv/on_the_air?language=pt-BR&page=${page}`,
       options
     );
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
     const data = await response.json();
-    movies.value = data.results;
+    tvShows.value = data.results;
     totalPages.value = data.total_pages;
     currentPage.value = page;
   } catch (error) {
-    console.error("Erro ao buscar filmes:", error);
+    console.error("Erro ao buscar séries:", error);
   } finally {
     loading.value = false;
   }
@@ -103,7 +102,7 @@ const fetchMovies = async (page = 1) => {
 const fetchGenres = async () => {
   try {
     const response = await fetch(
-      "https://api.themoviedb.org/3/genre/movie/list?language=pt-BR",
+      "https://api.themoviedb.org/3/genre/tv/list?language=pt-BR",
       options
     );
     if (!response.ok) {
@@ -119,7 +118,7 @@ const fetchGenres = async () => {
 // Função para alterar a página
 const changePage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
-    fetchMovies(page);
+    fetchTvShows(page);
   }
 };
 
@@ -129,17 +128,17 @@ const options = {
   headers: {
     accept: "application/json",
     Authorization:
-      "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjM2NjNGQzNTk0NDhkMmNiZjI4NDFjYTRkNTNjMGY2OCIsIm5iZiI6MTcyMTU3MzI5Mi45NzY2MTYsInN1YiI6IjYzMGJjZWUxMjc5MGJmMDA3YzEyMjI1MCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.0xJB6210SJ1wSsOWO3gdtPGcDXxN6r6jvfLPgffwpao", // Altere para usar variáveis de ambiente se possível
+      "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjM2NjNGQzNTk0NDhkMmNiZjI4NDFjYTRkNTNjMGY2OCIsIm5iZiI6MTcyMTU3MzI5Mi45NzY2MTYsInN1YiI6IjYzMGJjZWUxMjc5MGJmMDA3YzEyMjI1MCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.0xJB6210SJ1wSsOWO3gdtPGcDXxN6r6jvfLPgffwpao",
   },
 };
 
-// Buscar filmes e gêneros ao montar o componente
+// Buscar séries e gêneros ao montar o componente
 onMounted(() => {
-  fetchMovies();
+  fetchTvShows();
   fetchGenres();
 });
 
-// Função para buscar gêneros dos filmes
+// Função para buscar gêneros das séries
 const getGenres = (genreIds) => {
   return genreIds
     .map((id) => {
@@ -152,19 +151,19 @@ const getGenres = (genreIds) => {
 // Computed property para descrições truncadas
 const truncatedDescriptions = computed(() => {
   const descriptions = {};
-  movies.value.forEach((movie) => {
-    descriptions[movie.id] = expandedDescriptions.value[movie.id]
-      ? movie.overview
-      : movie.overview.length > 150
-      ? movie.overview.slice(0, 150) + "..."
-      : movie.overview;
+  tvShows.value.forEach((show) => {
+    descriptions[show.id] = expandedDescriptions.value[show.id]
+      ? show.overview
+      : show.overview.length > 150
+      ? show.overview.slice(0, 150) + "..."
+      : show.overview;
   });
   return descriptions;
 });
 
 // Função para alternar a descrição
-const toggleDescription = (movieId) => {
-  expandedDescriptions.value[movieId] = !expandedDescriptions.value[movieId];
+const toggleDescription = (showId) => {
+  expandedDescriptions.value[showId] = !expandedDescriptions.value[showId];
 };
 </script>
 
@@ -185,7 +184,7 @@ const toggleDescription = (movieId) => {
 }
 
 .spinner-container,
-.no-movies {
+.no-shows {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -193,9 +192,15 @@ const toggleDescription = (movieId) => {
 }
 
 .card-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .card-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .my-card {
@@ -205,7 +210,7 @@ const toggleDescription = (movieId) => {
   flex-direction: column;
 }
 
-.movie-poster {
+.show-poster {
   height: 450px;
   object-fit: cover;
 }
@@ -215,17 +220,17 @@ const toggleDescription = (movieId) => {
   flex-direction: column;
 }
 
-.movie-title {
+.show-title {
   font-size: 18px;
   font-weight: bold;
   margin-bottom: 10px;
 }
 
-.movie-info {
+.show-info {
   margin-bottom: 5px;
 }
 
-.movie-description {
+.show-description {
   margin-top: 10px;
   margin-bottom: 10px;
 }
