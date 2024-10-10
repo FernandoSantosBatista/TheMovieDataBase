@@ -1,251 +1,123 @@
-<!-- src/pages/IndexPage.vue -->
+
 <template>
-  <div class="container">
-    <div class="title">Filmes Mais Recentes</div>
-    <div v-if="loading" class="spinner-container">
-      <q-spinner color="primary" />
-    </div>
-    <div v-else-if="movies.length" class="card-container">
-      <q-card v-for="movie in movies" :key="movie.id" class="my-card">
-        <q-img
-          :src="'https://image.tmdb.org/t/p/w500' + movie.poster_path"
-          :alt="movie.title"
-          class="q-mb-md movie-poster"
+  <q-page padding class="flex flex-center q-pa-md" style="background: linear-gradient(135deg, #004e92, #000428);">
+    <div class="timer-container q-pa-xl q-mt-md q-mb-md">
+      <div id="timer" class="text-h1 q-mb-md text-bold text-center">{{ formattedTime }}</div>
+      <div id="rest-count" class="text-subtitle1 text-center q-mt-md text-accent">x {{ restCount }}</div>
+
+      <div class="q-gutter-md q-mt-md row justify-center">
+        <q-btn
+          outline
+          icon="play_arrow"
+          @click="startTimer"
+          color="primary"
+          rounded
+          push
+          size="lg"
+          class="timer-button"
         />
-        <q-card-section class="card-content">
-          <div class="text-h6 movie-title">{{ movie.title }}</div>
-          <div class="movie-info">
-            <strong>Lançamento:</strong> {{ movie.release_date }}
-          </div>
-          <div class="movie-info">
-            <strong>Gêneros:</strong> {{ getGenres(movie.genre_ids) }}
-          </div>
-          <div class="movie-info">
-            <strong>Nota:</strong> {{ movie.vote_average.toFixed(1) }}
-          </div>
-          <q-separator />
-          <div class="text-body2 movie-description">
-            {{ truncatedDescriptions[movie.id] }}
-          </div>
-          <q-btn
-            v-if="movie.overview.length > 150"
-            @click="toggleDescription(movie.id)"
-            color="primary"
-            flat
-            class="toggle-btn"
-          >
-            {{ expandedDescriptions[movie.id] ? "Ver menos" : "Ver mais" }}
-          </q-btn>
-        </q-card-section>
-      </q-card>
+        <q-btn
+          outline
+          icon="pause"
+          @click="pauseTimer"
+          color="primary"
+          rounded
+          push
+          size="lg"
+          class="timer-button"
+        />
+        <q-btn
+          outline
+          icon="refresh"
+          @click="resetTimer"
+          color="primary"
+          rounded
+          push
+          size="lg"
+          class="timer-button"
+        />
+      </div>
     </div>
-    <div v-else class="no-movies">
-      <div>Nenhum filme encontrado.</div>
-    </div>
-    <div class="pagination q-mt-md">
-      <q-btn
-        @click="changePage(currentPage - 1)"
-        :disabled="currentPage <= 1"
-        label="Anterior"
-        color="primary"
-        class="pagination-btn"
-      />
-      <span class="pagination-info"
-        >Página {{ currentPage }} de {{ totalPages }}</span
-      >
-      <q-btn
-        @click="changePage(currentPage + 1)"
-        :disabled="currentPage >= totalPages"
-        label="Próximo"
-        color="primary"
-        class="pagination-btn"
-      />
-    </div>
-  </div>
+  </q-page>
 </template>
 
-<script setup>
-import { ref, onMounted, computed } from "vue";
-
-// Lista de filmes, gêneros e paginação
-const movies = ref([]);
-const genres = ref([]);
-const currentPage = ref(1);
-const totalPages = ref(1);
-const loading = ref(false);
-
-// Estado para descrições expandidas
-const expandedDescriptions = ref({});
-
-// Função para buscar filmes com base na página atual
-const fetchMovies = async (page = 1) => {
-  loading.value = true;
-  try {
-    const response = await fetch(
-      `https://api.themoviedb.org/3/movie/now_playing?language=pt-BR&page=${page}`,
-      options
-    );
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    const data = await response.json();
-    movies.value = data.results;
-    totalPages.value = data.total_pages;
-    currentPage.value = page;
-  } catch (error) {
-    console.error("Erro ao buscar filmes:", error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Função para buscar gêneros
-const fetchGenres = async () => {
-  try {
-    const response = await fetch(
-      "https://api.themoviedb.org/3/genre/movie/list?language=pt-BR",
-      options
-    );
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    const data = await response.json();
-    genres.value = data.genres;
-  } catch (error) {
-    console.error("Erro ao buscar gêneros:", error);
-  }
-};
-
-// Função para alterar a página
-const changePage = (page) => {
-  if (page >= 1 && page <= totalPages.value) {
-    fetchMovies(page);
-  }
-};
-
-// Configurações do fetch com cabeçalhos personalizados
-const options = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization:
-      "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjM2NjNGQzNTk0NDhkMmNiZjI4NDFjYTRkNTNjMGY2OCIsIm5iZiI6MTcyMTU3MzI5Mi45NzY2MTYsInN1YiI6IjYzMGJjZWUxMjc5MGJmMDA3YzEyMjI1MCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.0xJB6210SJ1wSsOWO3gdtPGcDXxN6r6jvfLPgffwpao", // Altere para usar variáveis de ambiente se possível
+<script>
+export default {
+  data() {
+    return {
+      time: 60, // 60 segundos de descanso
+      restCount: 0, // Contador de descansos
+      interval: null,
+      isRunning: false, // Verifica se o cronômetro está rodando
+      isPaused: false, // Verifica se o cronômetro está pausado
+    };
   },
-};
-
-// Buscar filmes e gêneros ao montar o componente
-onMounted(() => {
-  fetchMovies();
-  fetchGenres();
-});
-
-// Função para buscar gêneros dos filmes
-const getGenres = (genreIds) => {
-  return genreIds
-    .map((id) => {
-      const genre = genres.value.find((g) => g.id === id);
-      return genre ? genre.name : "Desconhecido";
-    })
-    .join(", ");
-};
-
-// Computed property para descrições truncadas
-const truncatedDescriptions = computed(() => {
-  const descriptions = {};
-  movies.value.forEach((movie) => {
-    descriptions[movie.id] = expandedDescriptions.value[movie.id]
-      ? movie.overview
-      : movie.overview.length > 150
-      ? movie.overview.slice(0, 150) + "..."
-      : movie.overview;
-  });
-  return descriptions;
-});
-
-// Função para alternar a descrição
-const toggleDescription = (movieId) => {
-  expandedDescriptions.value[movieId] = !expandedDescriptions.value[movieId];
+  computed: {
+    formattedTime() {
+      return this.time < 10 ? '0' + this.time : this.time;
+    },
+  },
+  methods: {
+    updateTimer() {
+      if (this.time > 0) {
+        this.time--;
+      } else {
+        clearInterval(this.interval);
+        this.restCount++; // Incrementa o contador de descansos
+        this.$q.notify({
+          message: 'Tempo de descanso concluído!',
+          color: 'positive',
+          position: 'top',
+        });
+        this.isRunning = false; // Permite que o cronômetro seja reiniciado corretamente
+        this.isPaused = false; // Sai do estado pausado
+      }
+    },
+    startTimer() {
+      if (!this.isRunning && !this.isPaused) {
+        this.time = 60; // Reinicia o tempo para 60 segundos a cada novo início
+        clearInterval(this.interval); // Garante que não haverá múltiplos timers em execução
+        this.interval = setInterval(this.updateTimer, 1000);
+        this.isRunning = true;
+      } else if (this.isPaused) {
+        clearInterval(this.interval);
+        this.interval = setInterval(this.updateTimer, 1000);
+        this.isPaused = false;
+      }
+    },
+    pauseTimer() {
+      if (this.isRunning && !this.isPaused) {
+        clearInterval(this.interval);
+        this.isPaused = true;
+      }
+    },
+    resetTimer() {
+      clearInterval(this.interval);
+      this.time = 60;
+      this.restCount = 0;
+      this.isRunning = false;
+      this.isPaused = false;
+    },
+  },
 };
 </script>
 
-<style scoped>
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  max-width: 1200px;
-  margin: auto;
+<style>
+.timer-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
-.title {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 20px;
-}
-
-.spinner-container,
-.no-movies {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-}
-
-.card-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.my-card {
-  max-width: 300px;
-  margin: 10px;
-  display: flex;
-  flex-direction: column;
-}
-
-.movie-poster {
-  height: 450px;
-  object-fit: cover;
-}
-
-.card-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.movie-title {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.movie-info {
-  margin-bottom: 5px;
-}
-
-.movie-description {
-  margin-top: 10px;
-  margin-bottom: 10px;
-}
-
-.toggle-btn {
-  align-self: flex-start;
-}
-
-.pagination {
-  margin-top: 20px;
+.timer-button {
+  width: 70px;
+  height: 70px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.pagination-btn {
-  margin: 0 10px;
-}
-
-.pagination-info {
-  font-size: 16px;
+.text-accent {
+  color: #00d4ff;
 }
 </style>
